@@ -1,29 +1,34 @@
 import java.util.Random;
+import java.util.Scanner;
 
 public class TicTacToe {
     
-    private char[][] board;
+    private int[][] board;
 
     private int moveCount;
+
+    private int winner;
 
     private boolean gameOver;
 
     private static final int BOARD_SIZE = 3;
 
-    private static char EMPTY = '\u0000';
+    private static final int EMPTY = 0;
 
-    private static char PLAYER = 'X';
+    private static final int PLAYER = 1;
 
-    private static char OPPONENT = 'O';
+    private static final int OPPONENT = -1;
+
 
     public TicTacToe() {
-        board = new char[BOARD_SIZE][BOARD_SIZE];
+        board = new int[BOARD_SIZE][BOARD_SIZE];
         gameOver = false;
+        winner = 0;
         moveCount = 0;
     }
 
-    public void move(int row, int col, char team) {
-        if (row < 0 || row > 2 || col < 0 || col > 2)
+    public void move(int row, int col, int team) {
+        if (row < 0 || row > BOARD_SIZE - 1 || col < 0 || col > BOARD_SIZE - 1)
                 throw new IllegalArgumentException(row + " < or > 2, " + col + " < or > 2");
 
         if (board[row][col] != EMPTY)
@@ -34,14 +39,67 @@ public class TicTacToe {
         checkGameOver(row, col, team);
     }
 
+    public int minimax(int[][] board, int depth, boolean isMaximizing) {
+        double maxEval = Double.NEGATIVE_INFINITY;
+        double minEval = Double.POSITIVE_INFINITY;
+
+        if (gameOver)
+            return winner;
+
+        if (isMaximizing) {
+            for (int i = 0; i < BOARD_SIZE; i++) {
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    if (isValidMove(i, j)) {
+                        move(i, j, PLAYER);
+                        int eval = minimax(board, depth + 1, false);
+                        maxEval = Math.max(maxEval, eval);
+                        board[i][j] = EMPTY; // undo move 
+                    }
+                }
+            }
+            return (int) maxEval;
+        } else {
+            for (int i = 0; i < BOARD_SIZE; i++) {
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    if (isValidMove(i, j)) {
+                        move(i, j, OPPONENT);
+                        int eval = minimax(board, depth + 1, true);
+                        minEval = Math.min(minEval, eval);
+                        board[i][j] = EMPTY;
+                    }
+                }
+            }
+            return (int) minEval;
+        }
+
+    }
+
+    public int findBestMove() {
+        double maxEval = Double.POSITIVE_INFINITY;
+        int bestMove = -1;
+
+        for (int i = 0; i < Math.pow(BOARD_SIZE, 2); i++) {
+                if (isValidMove(i / 3, i % 3)) {
+                    board[i / 3][i % 3] = PLAYER;
+                    int eval = minimax(board, 0, false);
+                    board[i / 3][i % 3] = EMPTY;
+
+                    if (eval > maxEval) {
+                        bestMove = i;
+                        maxEval = eval;
+                    }
+                }
+            }
+        return bestMove;
+    }
+
     public void randomOpponentMove() {
         Random rand = new Random();
         
         while(true) {
-            int x = rand.nextInt(2);
-            int y = rand.nextInt(2);
-            if (isValidMove(x, y)) {
-                move(x, y, OPPONENT);
+            int pos = rand.nextInt((int) Math.pow(BOARD_SIZE, 2));
+            if (isValidMove(pos / BOARD_SIZE, pos % BOARD_SIZE )) {
+                move(pos / BOARD_SIZE, pos % BOARD_SIZE, OPPONENT);
                 break;
             }
         }
@@ -54,7 +112,7 @@ public class TicTacToe {
         return true;
     }
 
-    private void checkGameOver(int row, int col, char team) {
+    private void checkGameOver(int row, int col, int team) {
         // check horiontal 
         for (int i = 0; i < BOARD_SIZE; i++) {
             if (board[i][col] != team)
@@ -97,7 +155,7 @@ public class TicTacToe {
         // check anti diagonal
         if (row + col == BOARD_SIZE - 1) {
             for (int i = 0; i < BOARD_SIZE; i++) {
-                if (board[i][(BOARD_SIZE - 1) - i] != team)
+                if (board[i][BOARD_SIZE - 1 - i] != team)
                     break;
                 if (i == BOARD_SIZE - 1) {
                     if (team == OPPONENT)
@@ -109,50 +167,48 @@ public class TicTacToe {
         }
 
         // check tie
-        if (moveCount == Math.pow(BOARD_SIZE, 2) - 1) {
-            System.out.println(moveCount + "=" + (Math.pow(BOARD_SIZE,2) -1));
+        if (moveCount == Math.pow(BOARD_SIZE, 2))
             gameOver(0);
-
-        }
-            
     }
 
     private void gameOver(int type) {        
-        if (type == -1) {
+        /*if (type == -1) {
             System.out.println("You Lose!");
         } else if (type == 1) {
             System.out.println("You win!");
         } else {
             System.out.println("Tie!");
-        }
+        }*/
 
         gameOver = true;
+        winner = type;
     }
 
     public boolean isGameOver() {
         return gameOver;
     }
 
-
     public String toString() {
         String ret = " ";
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
-                if (board[i][j] == EMPTY)
+                if (board[i][j] == PLAYER) {
+                    ret += "X";
+                } else if (board[i][j] == OPPONENT) {
+                    ret += "O";
+                } else {
                     ret += " ";
-                else
-                    ret += board[i][j];
-
-                if (j != 2)
+                }
+            
+                if (j != BOARD_SIZE - 1)
                     ret += " | ";
                 else
                     ret += "\n";
             }
-            if (i != 2)
+            if (i != BOARD_SIZE - 1)
                 ret += "---+---+---\n ";
         }
         
         return ret;
     }
-    
 }
